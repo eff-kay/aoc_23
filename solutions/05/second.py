@@ -56,25 +56,26 @@ def compute(data):
 
 
     def apply_range_on_lines(R, lines):
-        A = []
+        intersect = []
         for line in lines:
             dest, src , sz = line
-            src_end = src+sz
-            NR = []
+            range_end = src+sz
+            non_intersect = []
             while R:
                 (st,ed) = R.pop()
                 # (src,sz) might cut (st,ed)
                 before = (st,min(ed,src))
-                inter = (max(st, src), min(src_end, ed))
-                after = (max(src_end, st), ed)
+                inter = (max(st, src), min(src+sz, ed))
+                after = (max(range_end, st), ed)
                 if before[1]>before[0]:
-                    NR.append(before)
+                    non_intersect.append(before)
                 if inter[1]>inter[0]:
-                    A.append((inter[0]-src+dest, inter[1]-src+dest))
+                    intersect.append((inter[0]-src+dest, inter[1]-src+dest))
                 if after[1]>after[0]:
-                    NR.append(after)
-            R = NR
-        return A+R
+                    non_intersect.append(after)
+
+            R = non_intersect
+        return intersect+R
 
     for s_loc in range(0, len(seeds), 2):
         st, ran = seeds[s_loc], seeds[s_loc+1]
