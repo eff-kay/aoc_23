@@ -54,7 +54,6 @@ def compute(data):
 
     numbers = []
 
-
     def apply_range_on_lines(R, lines):
         intersect = []
         for line in lines:
@@ -63,13 +62,12 @@ def compute(data):
             non_intersect = []
             while R:
                 (st,ed) = R.pop()
-                # (src,sz) might cut (st,ed)
                 before = (st,min(ed,src))
                 inter = (max(st, src), min(src+sz, ed))
                 after = (max(range_end, st), ed)
-                if before[1]>before[0]:
+                if before[1] > before[0]:
                     non_intersect.append(before)
-                if inter[1]>inter[0]:
+                if inter[1] > inter[0]:
                     intersect.append((inter[0]-src+dest, inter[1]-src+dest))
                 if after[1]>after[0]:
                     non_intersect.append(after)
@@ -77,22 +75,74 @@ def compute(data):
             R = non_intersect
         return intersect+R
 
+    def remap(lo, hi, m):
+        # Remap an interval (lo,hi) to a set of intervals m
+        ans = []
+        for dst, src, R in m:
+            end = src + R - 1
+            diff = dst - src  # How much is this range shifted
+
+            if not (end < lo or src > hi):
+                # intersection of the two ranges
+                ans.append((max(src, lo), min(end, hi), diff))
+
+        for i, interval in enumerate(ans):
+            li, ri, diff = interval
+            yield (li + diff, ri + diff)
+
+            if i < len(ans) - 1 and ans[i+1][0] > ri + 1:
+                yield (ri + 1, ans[i+1][0] - 1)
+
+        # the rest of the ranges
+        if len(ans) == 0:
+            # no overlap
+            yield (lo, hi)
+            return
+
+        # non overlapping to the left
+        if ans[0][0] != lo:
+            # before range
+            yield (lo, ans[0][0] - 1)
+
+        # non-overlapping to the right
+        if ans[-1][1] != hi:
+            # after range
+            yield (ans[-1][1] + 1, hi)
+
+    maps = [seed_to_soil, soil_to_fert, fert_to_wat, wat_to_light, li_to_temp, temp_to_humid, humid_to_loc]
+
+    ans = float('inf')
     for s_loc in range(0, len(seeds), 2):
-        st, ran = seeds[s_loc], seeds[s_loc+1]
-        # seed_ranges.add(range(st, st+ran))
-        R = [(st, st+ran)]
-        R = apply_range_on_lines(R, seed_to_soil)
-        R = apply_range_on_lines(R, soil_to_fert)
-        R = apply_range_on_lines(R, fert_to_wat)
-        R = apply_range_on_lines(R, wat_to_light)
-        R = apply_range_on_lines(R, li_to_temp)
-        R = apply_range_on_lines(R, temp_to_humid)
-        R = apply_range_on_lines(R, humid_to_loc)
+        start, R = seeds[s_loc], seeds[s_loc+1]
+        cur_intervals = [(start, start + R - 1)]
+        new_intervals = []
 
-        print(R)
-        numbers.append(min(R)[0])
+        for map in maps:
+            for lo, hi in cur_intervals:
+                for new_interval in remap(lo, hi, map):
+                    new_intervals.append(new_interval)
 
-    return min(numbers)+1
+            cur_intervals, new_intervals = new_intervals, []
+
+        for lo, hi in cur_intervals:
+            ans = min(ans, lo)
+            
+    # for s_loc in range(0, len(seeds), 2):
+    #     st, ran = seeds[s_loc], seeds[s_loc+1]
+    #     # seed_ranges.add(range(st, st+ran))
+    #     R = [(st, st+ran)]
+    #     R = remap(R, seed_to_soil)
+    #     # R = apply_range_on_lines(R, soil_to_fert)
+    #     # R = apply_range_on_lines(R, fert_to_wat)
+    #     # R = apply_range_on_lines(R, wat_to_light)
+    #     # R = apply_range_on_lines(R, li_to_temp)
+    #     # R = apply_range_on_lines(R, temp_to_humid)
+    #     # R = apply_range_on_lines(R, humid_to_loc)
+
+    #     # print(R)
+    #     numbers.append(min(R)[0])
+
+    return ans+1
 
 INPUT_S = '''\
 seeds: 79 14 55 13
